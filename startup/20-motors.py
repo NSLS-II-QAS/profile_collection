@@ -175,3 +175,9 @@ class BeamStop(Device):
     vertical   = Cpt(EpicsMotor, '-Ax:Y}Mtr')
 
 beamstop = BeamStop('XF:07BMB-OP{Stg:PE', name='beamstop')
+
+class FoilWheel(Device):
+    wheel1 = Cpt(EpicsMotor, '-Ax:RotUp}Mtr')
+    wheel2 = Cpt(EpicsMotor, '-Ax:RotDn}Mtr')
+
+foil_wheel = FoilWheel('XF:07BMB-OP{FoilWheel:1', name='foil_wheel')

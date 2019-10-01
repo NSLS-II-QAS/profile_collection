@@ -111,8 +111,8 @@ print("init EncoderFS")
 class EncoderFS(Encoder):
     "Encoder Device, when read, returns references to data in filestore."
     chunk_size = 2**20
-    write_path_template = '/nsls2/xf07bm/data/pizza_box_data/%Y/%m/%d/'
-
+    write_path_template = '/nsls2/xf07bm/data/pizza_box_data/%Y/%m/%d/'    
+    
     def stage(self):
         "Set the filename and record it in a 'resource' document in the filestore database."
 
@@ -259,11 +259,11 @@ class DIFS(DigitalInput):
 
         filename = 'di_' + str(uuid.uuid4())[:6]
         self._full_path = os.path.join(DIRECTORY, filename)  # stash for future reference
-
+        print(self._full_path)
         self.filepath.put(self._full_path)
         self.resource_uid = self._reg.register_resource(
             'PIZZABOX_DI_FILE_TXT',
-            DIRECTORY, full_path,
+            DIRECTORY, self._full_path,
             {'chunk_size': self.chunk_size})
 
         super().stage()

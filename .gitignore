@@ -105,6 +105,7 @@ static
 
 #swap file
 *.swp
+*~
 
 # DAMA playground
 zz-dama.py

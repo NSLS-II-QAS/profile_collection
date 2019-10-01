@@ -55,16 +55,18 @@ import sys
 from datetime import datetime
 import functools
 
+from bluesky.utils import ts_msg_hook
 # The logs will be saved to the profile dir.
 profile_startup_dir = get_ipython().profile_dir.startup_dir
 # The name of the log file consists of the beamline id and the timestamp at the
 # startup of bsui, so we don't have collisions of the names.
-# log_filename = f'{beamline_id}-bsui-{datetime.now().strftime("%Y%m%d%H%M%S")}.log'
-# log_filename = os.path.join(profile_startup_dir, log_filename)
-# print(f'\n!!! The logs will be written to {log_filename} !!!\n')
-# file = open(log_filename, 'a')
-# func = functools.partial(ts_msg_hook, file=file)
-# RE.msg_hook = func
+#log_filename = f'{beamline_id}-bsui-{datetime.now().strftime("%Y%m%d%H%M%S")}.log'
+#log_filename = os.path.join(profile_startup_dir, log_filename)
+#print(f'\n!!! The logs will be written to {log_filename} !!!\n')
+#file = open(log_filename, 'a')
+#func = functools.partial(ts_msg_hook, file=file)
+#RE.msg_hook = func
+RE.msg_hook = ts_msg_hook
 
 import caproto
 
