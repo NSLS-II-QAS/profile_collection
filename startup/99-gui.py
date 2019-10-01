@@ -66,9 +66,11 @@ xlive_gui = isstools.xlive.XliveGui(plan_funcs=[tscan, get_offsets],
 
 sys.stdout = xlive_gui.emitstream_out
 
-
 def xlive():
     xlive_gui.show()
+
+#sys.stdout = xlive_gui.emitstream_out
+#sys.stderr = xlive_gui.emitstream_err
 
 #from isstools.xview import XviewGui
 #xview_gui = XviewGui(PB_PULSES_PER_DEGREE)

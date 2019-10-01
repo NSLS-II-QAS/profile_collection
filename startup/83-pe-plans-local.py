@@ -20,16 +20,24 @@ def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int 
 
     yield from bps.mv(pe1.tiff.file_number,1)
     yield from bps.mv(pe1.tiff.file_path, file_path)
+  
+    init_num_repetitions = num_repetitions
 
     for indx in range(int(num_repetitions)):
-        
+       
+        print('\n')
+        print("<<<<<<<<<<<<<<<<< Doing repetition {} out of {} >>>>>>>>>>>>>>>>>".format(indx + 1, init_num_repetitions))
+ 
+        yield from bps.mv(pe1.tiff.file_name,filename)         
+
         if num_dark_images > 0:
             yield from bps.mv(pe1.num_dark_images ,num_dark_images )
+            yield from bps.mv(pe1.cam.image_mode, 'Average')
             yield from bps.mv(shutter_fs, 'Close')
             yield from bps.sleep(0.5)
+            yield from bps.mv(pe1.tiff.file_write_mode, 'Single')
             yield from bps.mv(pe1c, 'acquire_dark')
-
-        yield from bps.mv(pe1.tiff.file_name,filename)
+            yield from bps.mv(pe1.tiff.write_file, 1)
 
         ##yield from bps.mv(pe1.cam.image_mode, 'Multiple')
         yield from bps.mv(pe1.cam.image_mode, 'Average')
@@ -53,7 +61,6 @@ def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int 
 
         ##Below write_file is needed when used in 'Average' mode
         yield from bps.mv(pe1.tiff.write_file, 1)
-
-
+        
         yield from bps.sleep(delay)
 

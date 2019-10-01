@@ -87,3 +87,6 @@ logging.getLogger('caproto.ch').setLevel('ERROR')
 ROOT_PATH = '/nsls2/xf07bm'
 RAW_FILEPATH = 'data'
 USER_FILEPATH = 'users'
+
+#def print_to_gui(string, stdout=sys.stdout):
+#    print(string, file=stdout, flush=True)
