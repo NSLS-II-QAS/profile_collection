@@ -33,13 +33,17 @@ class EPS_Shutter(Device):
 
 
 class TwoButtonShutterQAS(TwoButtonShutter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.state = self.status
+
     def stop(self, success=False):
         pass
 
 
 class QASFastShutter(Device):
     IO_status = Cpt(EpicsSignal, '', kind='omitted')
-    status = Cpt(EpicsSignal, '', kind='omitted')
+    state = status = Cpt(EpicsSignal, '', kind='omitted')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,14 +81,15 @@ Here is the amplifier definition
 
 class ICAmplifier(Device):
 
-    gain = Cpt(EpicsSignal,'gain')
-    risetime = Cpt(EpicsSignal,'risetime')
+    gain = Cpt(EpicsSignal,'Gain')
+    risetime = Cpt(EpicsSignal,'RiseTime')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
     def get_gain(self):
-        return self.gain.get()+3
+        # return a list to match the ISS ICAmplifier
+        return [self.gain.get()+3]
 
     def set_gain(self, gain):
         self.gain.set(gain-3)

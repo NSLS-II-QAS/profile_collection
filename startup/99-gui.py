@@ -9,6 +9,7 @@ from bluesky.examples import motor
 motor.move = motor.set
 
 
+# TODO: move the *_dictionaries to 40-dictionaries.py as at ISS.
 detector_dictionary = {colmirror_diag.name: {'obj': colmirror_diag, 'elements': [colmirror_diag.stats1.total.name, colmirror_diag.stats2.total.name]},
                        screen_diag.name: {'obj': screen_diag, 'elements': [screen_diag.stats1.total.name, screen_diag.stats2.total.name]},
                        mono_diag.name: {'obj': mono_diag, 'elements': [mono_diag.stats1.total.name, mono_diag.stats2.total.name]},
@@ -42,25 +43,38 @@ shutters_dictionary = {
                        shutter_fs.name: shutter_fs,
                        }
 
+ic_amplifiers = {'i0_amp': i0_amp,
+                 'it_amp': it_amp,
+                 'ir_amp': ir_amp,
+                 'iff_amp': iff_amp,
+                 }
+
 sample_stages = [{'x': sample_stage1.x.name, 'y': sample_stage1.y.name}]
 
 print(mono1)
 
-xlive_gui = isstools.xlive.XliveGui(plan_funcs=[tscan, get_offsets], 
-                                    prep_traj_plan=prep_traj_plan,
-                                    diff_plans=[pe_count], 
+xlive_gui = isstools.xlive.XliveGui(plan_funcs={
+                                        "tscan": tscan, # TODO: make tscan a plan 
+                                        "get_offsets_plan": get_offsets_plan
+                                    },
+                                    service_plan_funcs={
+                                    
+                                    },
+                                    aux_plan_funcs={
+                                        "prep_traj_plan": prep_traj_plan,
+                                        "general_scan": general_scan,
+                                        'set_reference_foil': set_reference_foil,
+                                    },
+                                    #diff_plans=[pe_count], # TODO: fix this
                                     RE=RE,
                                     db=db, 
                                     accelerator=nsls_ii,
-                                    mono=mono1,#None,
+                                    hhm=mono1, # renamed mono=,
                                     shutters_dict=shutters_dictionary,
                                     det_dict=detector_dictionary,
-                                    aux_plan_funcs ={
-                                        'set_reference_foil': set_reference_foil,
-                                    },
                                     motors_dict=motors_dictionary,
-                                    general_scan_func=general_scan,
-                                    sample_stages = sample_stages,
+                                    ic_amplifiers=ic_amplifiers,
+                                    sample_stage=sample_stages,
                                     window_title="XLive @QAS/7-BM NSLS-II",
                                    )
 
@@ -84,4 +98,4 @@ def xlive():
 #print('starting pyinstrument profiler')
 ## jlynch 8/30
 
-xlive()
+# xlive()
