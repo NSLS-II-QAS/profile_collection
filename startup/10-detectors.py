@@ -56,8 +56,8 @@ class CAMERA(ProsilicaDetector, SingleTrigger):
 
 colmirror_diag = CAMERA('XF:07BM-BI{Mir:Col}', name='colmirror_diag')
 screen_diag = CAMERA('XF:07BM-BI{FS:1}', name='screen_diag') # HOW TO CALL CAMERA UNDER FT DIAGNOSTICS > Diagnostic Screen
-mono_diag = CAMERA('XF:07BM-BI{Mono:1}', name='mono_diag')
-dcr_diag = CAMERA('XF:07BM-BI{Diag:1}', name='dcr_diag')
+mono_diag = CAMERA('XF:07BMA-BI{Mono:1}', name='mono_diag')
+dcr_diag = CAMERA('XF:07BMA-BI{Diag:1}', name='dcr_diag')
 
 # Prosilica detector in hutch 7-BM-B
 hutchb_diag = CAMERA('XF:07BMB-BI{Diag:1}', name='hutchb_diag')

@@ -1,6 +1,8 @@
 print(__file__)
+import datetime
 import os
 import sys
+import time
 
 import uuid
 
@@ -64,3 +66,104 @@ def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int 
         
         yield from bps.sleep(delay)
 
+class QASPerkinElmerDarkDetector():
+
+    def __init__(self):
+        self.name = "dark-detector"
+        self.prefix = "prefix"
+        self.parent = None
+
+        self._staged = False
+
+        self.num_dark_images = None
+        self.file_path = None
+        self.filename = None
+        self.exposure = None
+        self.num_images = None
+
+    def stage(self):
+        print("stage!")
+        if self._staged:
+            raise RedundantStaging()
+
+        pe1.tiff.file_number.put(1)
+        pe1.tiff.file_path.put(self.file_path)
+
+        self._staged = True
+
+    def trigger(self):
+        print("trigger!")
+        pe1.tiff.file_name.put(self.filename)
+        if self.num_dark_images > 0:
+            pe1.num_dark_images.put(self.num_dark_images)
+            pe1.cam.image_mode.put('Average')
+            shutter_fs.put('Close')
+            time.sleep(0.5)
+            ##yield from bps.sleep(0.5)
+            pe1.tiff.file_write_mode.put('Single')
+            pe1c.put('acquire_dark')
+            pe1.tiff.write_file.put(1)
+
+        status = Status()
+        status.set_finished()
+        return status
+
+    def read(self):
+        print("read!")
+        ##pe1.cam.image_mode.put('Multiple')
+        pe1.cam.image_mode.put('Average')
+        pe1.cam.acquire_time.put(self.exposure)
+        pe1.cam.num_images.put(self.num_images)
+
+        shutter_fs.put('Open')
+        ##yield from bps.sleep(0.5)
+
+        ## Below 'Capture' mode is used with 'Multiple' image_mode
+        #pe1.tiff.file_write_mode.put('Capture')
+
+        ## Below 'Single' mode is used with 'Average' image_mode
+        pe1.tiff.file_write_mode.put('Single')
+
+        ## Uncomment 'capture' bit settings when used in 'Capture' mode
+        #pe1.tiff.capture.put(1)
+        pe1c.put('acquire_light')
+        ##yield from bps.sleep(1)
+        pe1.tiff.capture.put(0)
+
+        ##Below write_file is needed when used in 'Average' mode
+        pe1.tiff.write_file.put(1)
+
+        return {
+            self.name: {"value": 0.0, "timestamp": datetime.timestamp()}
+        }
+
+    def unstage(self):
+        print("unstage!")
+        self._staged = False
+
+pe1_dark = QASPerkinElmerDarkDetector()
+
+
+def pe_count_(
+        filename='',
+        write_path_template='Z:\\users\\{year}\\{cycle}\\{PROPOSAL}XRD\\',
+        exposure=1,
+        num_images:int=1,
+        num_dark_images:int=1,
+        num_repetitions:int=5,
+        delay=60
+):
+
+    print(f"proposal: {RE.md['PROPOSAL']}")
+
+    pe1_dark.num_dark_images = num_dark_images
+    pe1_dark.exposure = exposure
+    pe1_dark.num_images = num_images
+    pe1_dark.file_path = write_path_template.format(**RE.md)
+    pe1_dark.filename = str(uuid.uuid4()) + filename
+
+    yield from bp.count(
+        [pe1_dark],
+        num=num_repetitions,
+        delay=delay
+    )
