@@ -1,5 +1,5 @@
 print(__file__)
-import datetime
+from datetime import datetime
 import os
 import sys
 import time
@@ -81,6 +81,24 @@ class QASPerkinElmerDarkDetector():
         self.exposure = None
         self.num_images = None
 
+    def describe(self):
+        print("describe!")
+
+        description = dict()
+        description.update(pe1.describe())
+        description.update(shutter_fs.describe())
+
+        return description
+
+
+    def describe_configuration(self):
+        return dict()
+
+
+    def read_configuration(self):
+        return dict()
+
+
     def stage(self):
         print("stage!")
         if self._staged:
@@ -97,15 +115,16 @@ class QASPerkinElmerDarkDetector():
         if self.num_dark_images > 0:
             pe1.num_dark_images.put(self.num_dark_images)
             pe1.cam.image_mode.put('Average')
-            shutter_fs.put('Close')
+            ## shutter_fs.put('Close')
+            shutter_fs.set('Close')
             time.sleep(0.5)
             ##yield from bps.sleep(0.5)
             pe1.tiff.file_write_mode.put('Single')
-            pe1c.put('acquire_dark')
+            pe1c.set('acquire_dark')
             pe1.tiff.write_file.put(1)
 
         status = Status()
-        status.set_finished()
+        status._finished()
         return status
 
     def read(self):
@@ -115,7 +134,7 @@ class QASPerkinElmerDarkDetector():
         pe1.cam.acquire_time.put(self.exposure)
         pe1.cam.num_images.put(self.num_images)
 
-        shutter_fs.put('Open')
+        shutter_fs.set('Open')
         ##yield from bps.sleep(0.5)
 
         ## Below 'Capture' mode is used with 'Multiple' image_mode
@@ -126,7 +145,7 @@ class QASPerkinElmerDarkDetector():
 
         ## Uncomment 'capture' bit settings when used in 'Capture' mode
         #pe1.tiff.capture.put(1)
-        pe1c.put('acquire_light')
+        pe1c.set('acquire_light')
         ##yield from bps.sleep(1)
         pe1.tiff.capture.put(0)
 
@@ -134,7 +153,7 @@ class QASPerkinElmerDarkDetector():
         pe1.tiff.write_file.put(1)
 
         return {
-            self.name: {"value": 0.0, "timestamp": datetime.timestamp()}
+            self.name: {"value": 0.0, "timestamp": datetime.now().timestamp()}
         }
 
     def unstage(self):
@@ -151,7 +170,7 @@ def pe_count_(
         num_images:int=1,
         num_dark_images:int=1,
         num_repetitions:int=5,
-        delay=60
+        delay=2
 ):
 
     print(f"proposal: {RE.md['PROPOSAL']}")
