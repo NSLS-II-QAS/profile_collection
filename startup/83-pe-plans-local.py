@@ -1,10 +1,13 @@
 print(__file__)
+from collections import deque
 from datetime import datetime
 import os
 import sys
 import time
 
 import uuid
+
+from event_model import compose_resource
 
 
 def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int = 1, num_repetitions:int = 5, delay = 60):
@@ -66,6 +69,7 @@ def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int 
         
         yield from bps.sleep(delay)
 
+
 class QASPerkinElmerDarkDetector():
 
     def __init__(self):
@@ -80,6 +84,14 @@ class QASPerkinElmerDarkDetector():
         self.filename = None
         self.exposure = None
         self.num_images = None
+
+        self.resouce_root = None
+        self.resource_path = None
+
+        self._resource = None
+        self._datum_factory = None
+        self._asset_docs_cache = deque()
+
 
     def describe(self):
         print("describe!")
@@ -104,13 +116,27 @@ class QASPerkinElmerDarkDetector():
         if self._staged:
             raise RedundantStaging()
 
+        self.file_path = self.resource_root + self.resource_dir_path + self.filename
+        self._resource, self._datum_factory, _ = compose_resource(
+            start={"uid": "a lie"},
+            spec="???",
+            root=self.resource_root,  # "/",
+            resource_path=self.resource_dir_path + self.filename,
+            resource_kwargs={"???": "???", "????": "????"},
+        )
+        self._resource.pop("run_start")
+        self._asset_docs_cache.append(("resource", self._resource))
+
         pe1.tiff.file_number.put(1)
         pe1.tiff.file_path.put(self.file_path)
 
         self._staged = True
 
+
     def trigger(self):
         print("trigger!")
+        
+        # what about file path?
         pe1.tiff.file_name.put(self.filename)
         if self.num_dark_images > 0:
             pe1.num_dark_images.put(self.num_dark_images)
@@ -123,9 +149,17 @@ class QASPerkinElmerDarkDetector():
             pe1c.set('acquire_dark')
             pe1.tiff.write_file.put(1)
 
+        datum = self._datum_factory(
+            datum_kwargs={"???": "???"}
+        )
+        # this is important
+        self.image_file.put(datum["datum_id"])
+        self._asset_docs_cache.append(("datum", datum))
+
         status = Status()
         status._finished()
         return status
+
 
     def read(self):
         print("read!")
@@ -156,16 +190,21 @@ class QASPerkinElmerDarkDetector():
             self.name: {"value": 0.0, "timestamp": datetime.now().timestamp()}
         }
 
+
     def unstage(self):
         print("unstage!")
+        self._resource = None
+        self._datum_factory = None
         self._staged = False
 
 pe1_dark = QASPerkinElmerDarkDetector()
 
 
 def pe_count_(
+        resource_root='Z:\\users\\',
+        resource_dir_path='{year}\\{cycle}\\{PROPOSAL}XRD\\',
         filename='',
-        write_path_template='Z:\\users\\{year}\\{cycle}\\{PROPOSAL}XRD\\',
+        #write_path_template='Z:\\users\\{year}\\{cycle}\\{PROPOSAL}XRD\\',
         exposure=1,
         num_images:int=1,
         num_dark_images:int=1,
@@ -178,7 +217,11 @@ def pe_count_(
     pe1_dark.num_dark_images = num_dark_images
     pe1_dark.exposure = exposure
     pe1_dark.num_images = num_images
-    pe1_dark.file_path = write_path_template.format(**RE.md)
+    #pe1_dark.file_path = write_path_template.format(**RE.md)
+    #pe1_dark.filename = str(uuid.uuid4()) + filename
+
+    pe1_dark.resource_root = resource_root
+    pe1_dark.resource_dir_path = resource_dir_path.format(**RE.md)
     pe1_dark.filename = str(uuid.uuid4()) + filename
 
     yield from bp.count(
