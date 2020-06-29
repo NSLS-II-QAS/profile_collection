@@ -70,6 +70,35 @@ def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int 
         yield from bps.sleep(delay)
 
 
+from collections import deque
+from pathlib import Path
+from event_model import compose_resource
+from ophyd import Component as Cpt, DeviceStatus, Staged
+
+
+class ExternalFileReference(Signal):
+    # the "value" of this Signal is not a real PV
+    # but is intended to look like one
+
+    def __init__(self, *args, shape, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.shape = shape
+
+    def describe(self):
+        print("describe ExternalFileReferece!")
+        res = super().describe()
+        res[self.name].update(
+            dict(
+                external="FILESTORE:", dtype="array", shape=self.shape, dims=("x", "y"),
+            )
+        )
+        return res
+
+    def stage(self):
+        print("stage ExternalFileRefernce!")
+        return [self]
+
+
 class QASPerkinElmerDarkDetector():
 
     def __init__(self):
@@ -85,6 +114,8 @@ class QASPerkinElmerDarkDetector():
         self.exposure = None
         self.num_images = None
 
+        self.external_file_ref = ExternalFileReference(name="external_file_ref", shape=(2048, 2048))
+
         self.resouce_root = None
         self.resource_path = None
 
@@ -97,18 +128,47 @@ class QASPerkinElmerDarkDetector():
         print("describe!")
 
         description = dict()
+        description.update(
+            {
+                self.name: {"source": "astral plane", "dtype": "array", "shape": []}
+            }
+        )
         description.update(pe1.describe())
+        description.update(self.external_file_ref.describe())
         description.update(shutter_fs.describe())
 
+        print(description)
         return description
 
 
     def describe_configuration(self):
-        return dict()
+        print("describe_configuration!")
+        configuration = dict()
+ 
+        configuration.update(
+            {self.name: {"source": "??", "dtype": "array", "shape": (2048, 2048)}}
+        )
+        configuration.update(pe1.describe_configuration())
+        configuration.update(self.external_file_ref.describe_configuration())
+        configuration.update(shutter_fs.describe_configuration())
+        
+        print(configuration)
+        return configuration
 
 
     def read_configuration(self):
-        return dict()
+        print("read_configuration!")
+        configuration = dict()
+
+        configuration.update(
+            {self.name: {"value": 0, "timestamp": time.time()}}
+        )
+        configuration.update(pe1.read_configuration())
+        configuration.update(shutter_fs.read_configuration())
+        configuration.update(self.external_file_ref.read_configuration())
+
+        print(configuration)
+        return configuration
 
 
     def stage(self):
@@ -122,7 +182,7 @@ class QASPerkinElmerDarkDetector():
             spec="???",
             root=self.resource_root,  # "/",
             resource_path=self.resource_dir_path + self.filename,
-            resource_kwargs={"???": "???", "????": "????"},
+            resource_kwargs={"image_shape": (2048, 2048)},
         )
         self._resource.pop("run_start")
         self._asset_docs_cache.append(("resource", self._resource))
@@ -153,7 +213,7 @@ class QASPerkinElmerDarkDetector():
             datum_kwargs={"???": "???"}
         )
         # this is important
-        self.image_file.put(datum["datum_id"])
+        self.external_file_ref.put(datum["datum_id"])
         self._asset_docs_cache.append(("datum", datum))
 
         status = Status()
@@ -186,9 +246,15 @@ class QASPerkinElmerDarkDetector():
         ##Below write_file is needed when used in 'Average' mode
         pe1.tiff.write_file.put(1)
 
-        return {
-            self.name: {"value": 0.0, "timestamp": datetime.now().timestamp()}
-        }
+        read_results = dict()
+        read_results.update({self.name: {"value": 0, "timestamp": time.time()}})
+        read_results.update(pe1.read())
+        read_results.update(shutter_fs.read())
+        read_results.update(self.external_file_ref.read())
+
+        print(read_results)
+
+        return read_results
 
 
     def unstage(self):
@@ -196,6 +262,15 @@ class QASPerkinElmerDarkDetector():
         self._resource = None
         self._datum_factory = None
         self._staged = False
+
+
+    def collect_asset_docs(self):
+        print("collect asset docs from DetectorC!")
+        items = list(self._asset_docs_cache)
+        self._asset_docs_cache.clear()
+        for item in items:
+            yield item
+
 
 pe1_dark = QASPerkinElmerDarkDetector()
 
