@@ -1,4 +1,4 @@
-print(__file__)
+print:(__file__)
 from collections import deque
 from datetime import datetime
 import os
@@ -179,7 +179,7 @@ class QASPerkinElmerDarkDetector():
         self.file_path = self.resource_root + self.resource_dir_path + self.filename
         self._resource, self._datum_factory, _ = compose_resource(
             start={"uid": "a lie"},
-            spec="???",
+            spec="ADC_TIFF",
             root=self.resource_root,  # "/",
             resource_path=self.resource_dir_path + self.filename,
             resource_kwargs={"image_shape": (2048, 2048)},
@@ -283,7 +283,7 @@ def pe_count_(
         exposure=1,
         num_images:int=1,
         num_dark_images:int=1,
-        num_repetitions:int=5,
+        num_repetitions:int=1,
         delay=2
 ):
 
