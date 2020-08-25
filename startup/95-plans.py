@@ -63,8 +63,6 @@ def prep_traj_plan(delay = 0.1):
     yield from bps.sleep(delay)
 
 
-
-
 def execute_trajectory(name, ignore_shutter=True, **metadata):
     ''' Execute a trajectory on the flyers given:
             flyers : list of flyers to fly on
@@ -190,6 +188,37 @@ def execute_trajectory_xs3(name, ignore_shutter=True, **metadata):
     interp_fn = f"{ROOT_PATH}/{USER_FILEPATH}/{RE.md['year']}/{RE.md['cycle']}/{RE.md['PROPOSAL']}/{name}.raw"
     curr_traj = getattr(mono1, 'traj{:.0f}'.format(mono1.lut_number_rbv.value))
 
+    #Terrible hack again following Eli's foot steps
+    foil_elem = get_reference_foil()
+    i0_gainB  = i0_amp.get_gain()
+    it_gainB  = it_amp.get_gain()
+    ir_gainB  = ir_amp.get_gain()
+    iff_gainB = iff_amp.get_gain()
+
+    mfc1B_he = mfc1_he.flow_rb.get()
+    mfc2B_n2 = mfc2_n2.flow_rb.get()
+    mfc3B_ar = mfc3_ar.flow_rb.get()
+    mfc4B_n2 = mfc4_n2.flow_rb.get()
+    mfc5B_ar = mfc5_ar.flow_rb.get()
+
+    incident_beampathB_y = ip_y_stage.user_readback.get()
+
+    incident_slitsB_top      = jj_slits.top.user_readback.get()
+    incident_slitsB_bottom   = jj_slits.bottom.user_readback.get()
+    incident_slitsB_inboard  = jj_slits.inboard.user_readback.get()
+    incident_slitsB_outboard = jj_slits.outboard.user_readback.get()
+
+    sample_stageB_rot = sample_stage1.rotary.user_readback.get()
+    sample_stageB_x   = sample_stage1.x.user_readback.get()
+    sample_stageB_y   = sample_stage1.y.user_readback.get()
+    sample_stageB_z   = sample_stage1.z.user_readback.get()
+
+    pe_y = pe_pos.vertical.user_readback.get()
+
+    cm_xu = cm.hor_up.user_readback.get()
+    cm_xd = cm.hor_down.user_readback.get()
+    #End of terrible hack
+
     # wip terrible hack
     roi1_ch1_lo = xs.channel1.rois.roi01.bin_low.get()
     roi2_ch1_lo = xs.channel1.rois.roi02.bin_low.get()
@@ -246,6 +275,13 @@ def execute_trajectory_xs3(name, ignore_shutter=True, **metadata):
           'edge': curr_traj.edge.value,
           'e0': curr_traj.e0.value,
           'pulses_per_deg': mono1.pulses_per_deg,
+          'keithley_gainsB': [i0_gainB, it_gainB, ir_gainB, iff_gainB],
+          'ionchamber_ratesB': [mfc1B_he, mfc2B_n2, mfc3B_ar, mfc4B_n2, mfc5B_ar],
+          'incident_beampathB': [incident_beampathB_y],
+          'incident_slits': [incident_slitsB_top, incident_slitsB_bottom, incident_slitsB_inboard, incident_slitsB_outboard],
+          'sample_stageB': [sample_stageB_rot, sample_stageB_x, sample_stageB_y, sample_stageB_z],
+          'pe_vertical': [pe_y],
+          'cm_horizontal':[cm_xu, cm_xd],
           'rois': [[roi1_ch1_lo, roi1_ch1_hi, roi2_ch1_lo, roi2_ch1_hi, roi3_ch1_lo, roi3_ch1_hi, roi4_ch1_lo, roi4_ch1_hi],
                    [roi1_ch2_lo, roi1_ch2_hi, roi2_ch2_lo, roi2_ch2_hi, roi3_ch2_lo, roi3_ch2_hi, roi4_ch2_lo, roi4_ch2_hi],
                    [roi1_ch3_lo, roi1_ch3_hi, roi2_ch3_lo, roi2_ch3_hi, roi3_ch3_lo, roi3_ch3_hi, roi4_ch3_lo, roi4_ch3_hi],
@@ -254,8 +290,8 @@ def execute_trajectory_xs3(name, ignore_shutter=True, **metadata):
         if hasattr(flyer, 'offset'):
             md['{} offset'.format(flyer.name)] = flyer.offset.value
     md.update(metadata)
-    RE.md.update(md)
-    yield from xs_plan()
+    #RE.md.update(md)
+    yield from xs_plan(plan_md=md)
 
 
 def get_offsets_plan(detectors, num = 1, name = '', **metadata):
