@@ -1,4 +1,4 @@
-print:(__file__)
+print: (__file__)
 from collections import deque
 from datetime import datetime
 import os
@@ -10,65 +10,203 @@ import uuid
 from event_model import compose_resource
 
 
-def pe_count(filename='', exposure = 1, num_images:int = 1, num_dark_images:int = 1, num_repetitions:int = 5, delay = 60):
+def pe_count(
+    filename="",
+    exposure=1,
+    num_images: int = 1,
+    num_dark_images: int = 1,
+    num_repetitions: int = 5,
+    delay=60,
+):
 
-    year     = RE.md['year']
-    cycle    = RE.md['cycle']
-    proposal = RE.md['PROPOSAL']
-   
+    year = RE.md["year"]
+    cycle = RE.md["cycle"]
+    proposal = RE.md["PROPOSAL"]
+
     print(proposal)
 
-    #write_path_template = 'Z:\\data\\pe1_data\\%Y\\%m\\%d\\'
-    write_path_template = f'Z:\\users\\{year}\\{cycle}\\{proposal}XRD\\'
+    # write_path_template = 'Z:\\data\\pe1_data\\%Y\\%m\\%d\\'
+    write_path_template = f"Z:\\users\\{year}\\{cycle}\\{proposal}XRD\\"
     file_path = datetime.now().strftime(write_path_template)
     filename = filename + str(uuid.uuid4())[:6]
 
-    yield from bps.mv(pe1.tiff.file_number,1)
+    yield from bps.mv(pe1.tiff.file_number, 1)
     yield from bps.mv(pe1.tiff.file_path, file_path)
-  
+
     init_num_repetitions = num_repetitions
 
     for indx in range(int(num_repetitions)):
-       
-        print('\n')
-        print("<<<<<<<<<<<<<<<<< Doing repetition {} out of {} >>>>>>>>>>>>>>>>>".format(indx + 1, init_num_repetitions))
- 
-        yield from bps.mv(pe1.tiff.file_name,filename)         
+
+        print("\n")
+        print(
+            "<<<<<<<<<<<<<<<<< Doing repetition {} out of {} >>>>>>>>>>>>>>>>>".format(
+                indx + 1, init_num_repetitions
+            )
+        )
+
+        yield from bps.mv(pe1.tiff.file_name, filename)
 
         if num_dark_images > 0:
-            yield from bps.mv(pe1.num_dark_images ,num_dark_images )
-            yield from bps.mv(pe1.cam.image_mode, 'Average')
-            yield from bps.mv(shutter_fs, 'Close')
+            yield from bps.mv(pe1.num_dark_images, num_dark_images)
+            yield from bps.mv(pe1.cam.image_mode, "Average")
+            yield from bps.mv(shutter_fs, "Close")
             yield from bps.sleep(0.5)
-            yield from bps.mv(pe1.tiff.file_write_mode, 'Single')
-            yield from bps.mv(pe1c, 'acquire_dark')
+            yield from bps.mv(pe1.tiff.file_write_mode, "Single")
+            yield from bps.mv(pe1c, "acquire_dark")
             yield from bps.mv(pe1.tiff.write_file, 1)
 
         ##yield from bps.mv(pe1.cam.image_mode, 'Multiple')
-        yield from bps.mv(pe1.cam.image_mode, 'Average')
+        yield from bps.mv(pe1.cam.image_mode, "Average")
         yield from bps.mv(pe1.cam.acquire_time, exposure)
-        yield from bps.mv(pe1.cam.num_images,num_images)
-    
-        yield from bps.mv(shutter_fs, 'Open')
+        yield from bps.mv(pe1.cam.num_images, num_images)
+
+        yield from bps.mv(shutter_fs, "Open")
         yield from bps.sleep(0.5)
-    
+
         ## Below 'Capture' mode is used with 'Multiple' image_mode
-        #yield from bps.mv(pe1.tiff.file_write_mode, 'Capture')
+        # yield from bps.mv(pe1.tiff.file_write_mode, 'Capture')
 
         ## Below 'Single' mode is used with 'Average' image_mode
-        yield from bps.mv(pe1.tiff.file_write_mode, 'Single')
+        yield from bps.mv(pe1.tiff.file_write_mode, "Single")
 
         ## Uncomment 'capture' bit settings when used in 'Capture' mode
-        #yield from bps.mv(pe1.tiff.capture, 1)
-        yield from bps.mv(pe1c, 'acquire_light')
+        # yield from bps.mv(pe1.tiff.capture, 1)
+        yield from bps.mv(pe1c, "acquire_light")
         yield from bps.sleep(1)
-        #yield from bps.mv(pe1.tiff.capture, 0)
+        # yield from bps.mv(pe1.tiff.capture, 0)
 
         ##Below write_file is needed when used in 'Average' mode
         yield from bps.mv(pe1.tiff.write_file, 1)
-        
+
         yield from bps.sleep(delay)
 
+
+import bluesky.preprocessors as bpp
+from ophyd.device import BlueskyInterface
+
+
+class DiffractionTrigger(BlueskyInterface):
+    """
+    This trigger mixin class records images when it is triggered.
+
+    It expects the detector to *already* be acquiring, continously ???
+    """
+    def __init__(self, *args, **kwargs):
+
+    def stage(self):
+        if self.cam.acquire.get() != 1:
+            raise RuntimeError("The ContinuousAcuqisitionTrigger expects "
+                               "the detector to already be acquiring.")
+        return super().stage()
+        # put logic to look up proper dark frame
+        # die if none is found
+
+    def trigger(self):
+        "Trigger one acquisition."
+        if not self._staged:
+            raise RuntimeError("This detector is not ready to trigger."
+                               "Call the stage() method before triggering.")
+        self._save_started = False
+        self._status = DeviceStatus(self)
+        self._desired_number_of_sets = self.number_of_sets.get()
+        self._plugin.num_capture.put(self._desired_number_of_sets)
+        self.dispatch(self._image_name, ttime.time())
+        # reset the proc buffer, this needs to be generalized
+        self.proc.reset_filter.put(1)
+        self._plugin.capture.put(1)  # Now the TIFF plugin is capturing.
+        return self._status
+
+
+class PerkinElmerDiffraction(DiffractionTrigger, QASPerkinElmer):
+    pass
+
+ped = PerkinElmerDiffraction(pe1_pv_prefix, name='pe1',
+                             read_attrs=['tiff', 'stats1.total'],
+                             plugin_name='tiff')
+
+
+def pe_count_plan(
+    filename="",
+    exposure=1,
+    num_images: int = 1,
+    num_dark_images: int = 1,
+    num_repetitions: int = 5,
+    delay=60,
+):
+    year = RE.md["year"]
+    cycle = RE.md["cycle"]
+    proposal = RE.md["PROPOSAL"]
+
+    print(proposal)
+
+    # write_path_template = 'Z:\\data\\pe1_data\\%Y\\%m\\%d\\'
+    write_path_template = f"Z:\\users\\{year}\\{cycle}\\{proposal}XRD\\"
+    file_path = datetime.now().strftime(write_path_template)
+    filename = filename + str(uuid.uuid4())[:6]
+
+    init_num_repetitions = num_repetitions
+
+    def count_pe1():
+        return (
+            yield from bps.repeat(partial(bps.one_shot, [pe1]), num=1, delay=delay)
+        )
+
+    @bpp.stage_decorator([pe1])
+    @bpp.run_decorator(md={})
+    def plan():
+        yield from bps.mv(pe1.tiff.file_number, 1)
+        yield from bps.mv(pe1.tiff.file_path, file_path)
+
+        for indx in range(int(num_repetitions)):
+
+            print("\n")
+            print(
+                "<<<<<<<<<<<<<<<<< Doing repetition {} out of {} >>>>>>>>>>>>>>>>>".format(
+                    indx + 1, init_num_repetitions
+                )
+            )
+
+            yield from bps.mv(pe1.tiff.file_name, filename)
+
+            if num_dark_images > 0:
+                yield from bps.mv(pe1.num_dark_images, num_dark_images)
+                yield from bps.mv(pe1.cam.image_mode, "Average")
+                yield from bps.mv(shutter_fs, "Close")
+                yield from bps.sleep(0.5)
+                yield from bps.mv(pe1.tiff.file_write_mode, "Single")
+                yield from bps.mv(pe1c, "acquire_dark")
+                yield from bps.mv(pe1.tiff.write_file, 1)
+
+            ##yield from bps.mv(pe1.cam.image_mode, 'Multiple')
+            yield from bps.mv(pe1.cam.image_mode, "Average")
+            yield from bps.mv(pe1.cam.acquire_time, exposure)
+            yield from bps.mv(pe1.cam.num_images, num_images)
+
+            yield from bps.mv(shutter_fs, "Open")
+            yield from bps.sleep(0.5)
+
+            ## Below 'Capture' mode is used with 'Multiple' image_mode
+            # yield from bps.mv(pe1.tiff.file_write_mode, 'Capture')
+
+            ## Below 'Single' mode is used with 'Average' image_mode
+            yield from bps.mv(pe1.tiff.file_write_mode, "Single")
+
+            ### try replacing this code with count_pe1()
+            ## Uncomment 'capture' bit settings when used in 'Capture' mode
+            # yield from bps.mv(pe1.tiff.capture, 1)
+            ### yield from bps.mv(pe1c, "acquire_light")
+            ### yield from bps.sleep(1)
+            # yield from bps.mv(pe1.tiff.capture, 0)
+
+            # use a count-like plan
+            yield from count_pe1()
+
+            ##Below write_file is needed when used in 'Average' mode
+            yield from bps.mv(pe1.tiff.write_file, 1)
+
+            yield from bps.sleep(delay)
+
+        return (yield from plan())
 
 from collections import deque
 from pathlib import Path
@@ -89,7 +227,10 @@ class ExternalFileReference(Signal):
         res = super().describe()
         res[self.name].update(
             dict(
-                external="FILESTORE:", dtype="array", shape=self.shape, dims=("x", "y"),
+                external="FILESTORE:",
+                dtype="array",
+                shape=self.shape,
+                dims=("x", "y"),
             )
         )
         return res
@@ -99,8 +240,7 @@ class ExternalFileReference(Signal):
         return [self]
 
 
-class QASPerkinElmerDarkDetector():
-
+class QASPerkinElmerDarkDetector:
     def __init__(self):
         self.name = "dark-detector"
         self.prefix = "prefix"
@@ -114,7 +254,9 @@ class QASPerkinElmerDarkDetector():
         self.exposure = None
         self.num_images = None
 
-        self.external_file_ref = ExternalFileReference(name="external_file_ref", shape=(2048, 2048))
+        self.external_file_ref = ExternalFileReference(
+            name="external_file_ref", shape=(2048, 2048)
+        )
 
         self.resouce_root = None
         self.resource_path = None
@@ -123,15 +265,12 @@ class QASPerkinElmerDarkDetector():
         self._datum_factory = None
         self._asset_docs_cache = deque()
 
-
     def describe(self):
         print("describe!")
 
         description = dict()
         description.update(
-            {
-                self.name: {"source": "astral plane", "dtype": "array", "shape": []}
-            }
+            {self.name: {"source": "astral plane", "dtype": "array", "shape": []}}
         )
         description.update(pe1.describe())
         description.update(self.external_file_ref.describe())
@@ -140,36 +279,31 @@ class QASPerkinElmerDarkDetector():
         print(description)
         return description
 
-
     def describe_configuration(self):
         print("describe_configuration!")
         configuration = dict()
- 
+
         configuration.update(
             {self.name: {"source": "??", "dtype": "array", "shape": (2048, 2048)}}
         )
         configuration.update(pe1.describe_configuration())
         configuration.update(self.external_file_ref.describe_configuration())
         configuration.update(shutter_fs.describe_configuration())
-        
+
         print(configuration)
         return configuration
-
 
     def read_configuration(self):
         print("read_configuration!")
         configuration = dict()
 
-        configuration.update(
-            {self.name: {"value": 0, "timestamp": time.time()}}
-        )
+        configuration.update({self.name: {"value": 0, "timestamp": time.time()}})
         configuration.update(pe1.read_configuration())
         configuration.update(shutter_fs.read_configuration())
         configuration.update(self.external_file_ref.read_configuration())
 
         print(configuration)
         return configuration
-
 
     def stage(self):
         print("stage!")
@@ -192,26 +326,23 @@ class QASPerkinElmerDarkDetector():
 
         self._staged = True
 
-
     def trigger(self):
         print("trigger!")
-        
+
         # what about file path?
         pe1.tiff.file_name.put(self.filename)
         if self.num_dark_images > 0:
             pe1.num_dark_images.put(self.num_dark_images)
-            pe1.cam.image_mode.put('Average')
+            pe1.cam.image_mode.put("Average")
             ## shutter_fs.put('Close')
-            shutter_fs.set('Close')
+            shutter_fs.set("Close")
             time.sleep(0.5)
             ##yield from bps.sleep(0.5)
-            pe1.tiff.file_write_mode.put('Single')
-            pe1c.set('acquire_dark')
+            pe1.tiff.file_write_mode.put("Single")
+            pe1c.set("acquire_dark")
             pe1.tiff.write_file.put(1)
 
-        datum = self._datum_factory(
-            datum_kwargs={"???": "???"}
-        )
+        datum = self._datum_factory(datum_kwargs={"???": "???"})
         # this is important
         self.external_file_ref.put(datum["datum_id"])
         self._asset_docs_cache.append(("datum", datum))
@@ -220,26 +351,25 @@ class QASPerkinElmerDarkDetector():
         status._finished()
         return status
 
-
     def read(self):
         print("read!")
         ##pe1.cam.image_mode.put('Multiple')
-        pe1.cam.image_mode.put('Average')
+        pe1.cam.image_mode.put("Average")
         pe1.cam.acquire_time.put(self.exposure)
         pe1.cam.num_images.put(self.num_images)
 
-        shutter_fs.set('Open')
+        shutter_fs.set("Open")
         ##yield from bps.sleep(0.5)
 
         ## Below 'Capture' mode is used with 'Multiple' image_mode
-        #pe1.tiff.file_write_mode.put('Capture')
+        # pe1.tiff.file_write_mode.put('Capture')
 
         ## Below 'Single' mode is used with 'Average' image_mode
-        pe1.tiff.file_write_mode.put('Single')
+        pe1.tiff.file_write_mode.put("Single")
 
         ## Uncomment 'capture' bit settings when used in 'Capture' mode
-        #pe1.tiff.capture.put(1)
-        pe1c.set('acquire_light')
+        # pe1.tiff.capture.put(1)
+        pe1c.set("acquire_light")
         ##yield from bps.sleep(1)
         pe1.tiff.capture.put(0)
 
@@ -256,13 +386,11 @@ class QASPerkinElmerDarkDetector():
 
         return read_results
 
-
     def unstage(self):
         print("unstage!")
         self._resource = None
         self._datum_factory = None
         self._staged = False
-
 
     def collect_asset_docs(self):
         print("collect asset docs from DetectorC!")
@@ -276,15 +404,15 @@ pe1_dark = QASPerkinElmerDarkDetector()
 
 
 def pe_count_(
-        resource_root='Z:\\users\\',
-        resource_dir_path='{year}\\{cycle}\\{PROPOSAL}XRD\\',
-        filename='',
-        #write_path_template='Z:\\users\\{year}\\{cycle}\\{PROPOSAL}XRD\\',
-        exposure=1,
-        num_images:int=1,
-        num_dark_images:int=1,
-        num_repetitions:int=1,
-        delay=2
+    resource_root="Z:\\users\\",
+    resource_dir_path="{year}\\{cycle}\\{PROPOSAL}XRD\\",
+    filename="",
+    # write_path_template='Z:\\users\\{year}\\{cycle}\\{PROPOSAL}XRD\\',
+    exposure=1,
+    num_images: int = 1,
+    num_dark_images: int = 1,
+    num_repetitions: int = 1,
+    delay=2,
 ):
 
     print(f"proposal: {RE.md['PROPOSAL']}")
@@ -292,15 +420,11 @@ def pe_count_(
     pe1_dark.num_dark_images = num_dark_images
     pe1_dark.exposure = exposure
     pe1_dark.num_images = num_images
-    #pe1_dark.file_path = write_path_template.format(**RE.md)
-    #pe1_dark.filename = str(uuid.uuid4()) + filename
+    # pe1_dark.file_path = write_path_template.format(**RE.md)
+    # pe1_dark.filename = str(uuid.uuid4()) + filename
 
     pe1_dark.resource_root = resource_root
     pe1_dark.resource_dir_path = resource_dir_path.format(**RE.md)
     pe1_dark.filename = str(uuid.uuid4()) + filename
 
-    yield from bp.count(
-        [pe1_dark],
-        num=num_repetitions,
-        delay=delay
-    )
+    yield from bp.count([pe1_dark], num=num_repetitions, delay=delay)
