@@ -1,6 +1,10 @@
 print(__file__)
 from bluesky.callbacks.mpl_plotting import LivePlot
 
+def print_now():
+    return datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')
+
+
 
 class NormPlot(LivePlot):
     def __init__(self, num_name, den_name, result_name, *args, **kwargs):

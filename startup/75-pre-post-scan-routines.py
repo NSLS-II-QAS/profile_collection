@@ -6,7 +6,7 @@ from scipy.optimize import curve_fit
 from bluesky.plan_stubs import mv, mvr
 import bluesky.preprocessors as bpp
 from random import random
-from xas.trajectory import trajectory_manager
+
 import json
 
 json_file_path = '/nsls2/xf07bm/settings/json/foil_wheel.json'

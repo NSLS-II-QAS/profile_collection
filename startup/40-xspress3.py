@@ -19,7 +19,7 @@ from pathlib import PurePath
 from nslsii.detectors.xspress3 import (XspressTrigger, Xspress3Detector,
                                          Xspress3Channel, Xspress3FileStore, Xspress3ROI, logger)
 
-from isstools.trajectory.trajectory import trajectory_manager
+
 
 import bluesky.plans as bp
 import bluesky.plan_stubs as bps
