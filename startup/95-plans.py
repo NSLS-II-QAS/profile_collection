@@ -279,7 +279,7 @@ def execute_trajectory_xs3(name, ignore_shutter=True, **metadata):
           #'pulses_per_deg': mono1.pulses_per_deg,
           'foil_element': [foil_elem],
           'pulses_per_deg': mono1.pulses_per_deg,
-          'keithley_gainsB': [i0_gainB, it_gainB, ir_gainB, iff_gainB],
+          'keithley_gainsB': [i0_gainB, it_gainB, ir_gainB, iff_gainB, 0, 0, 0, 0],
           'ionchamber_ratesB': [mfc1B_he, mfc2B_n2, mfc3B_ar, mfc4B_n2, mfc5B_ar],
           'incident_beampathB': [incident_beampathB_y],
           'incident_slits': [incident_slitsB_top, incident_slitsB_bottom, incident_slitsB_inboard, incident_slitsB_outboard],
@@ -315,3 +315,32 @@ def get_offsets_plan(detectors, num = 1, name = '', **metadata):
             yield from bps.abs_set(flyer.offset, ret, wait=True)
 
     yield from bpp.fly_during_wrapper(bpp.finalize_wrapper(plan, set_offsets()), flyers)
+
+def fly_scan_with_apb(name: str, comment: str, n_cycles: int = 1, delay: float = 0, **kwargs):
+        '''
+        Trajectory Scan - Runs the monochromator along the trajectory that is previously loaded in the controller N times
+        Parameters
+        ----------
+        name : str
+            Name of the scan - it will be stored in the metadata
+        n_cycles : int (default = 1)
+            Number of times to run the scan automatically
+        delay : float (default = 0)
+            Delay in seconds between scans
+        Returns
+        -------
+        uid : list(str)
+            Lists containing the unique ids of the scans
+        '''
+        sys.stdout = kwargs.pop('stdout', sys.stdout)
+        uids = []
+
+        for indx in range(int(n_cycles)):
+            name_n = '{} {:04d}'.format(name, indx + 1)
+            yield from prep_traj_plan()
+            print(f'Trajectory preparation complete at {print_now()}')
+            uid = (yield from execute_trajectory_apb(name_n, comment=comment))
+            uids.append(uid)
+            print(f'Trajectory is complete {print_now()}')
+            yield from bps.sleep(float(delay))
+        return uids

@@ -125,9 +125,9 @@ def execute_trajectory_apb(name, **metadata):
           'element': curr_traj.elem.value,
           'element_full': full_element_name,
           'edge': curr_traj.edge.value,
+          'keithley_gainsB': [i0_gainB, it_gainB, ir_gainB, iff_gainB, 0, 0, 0, 0],
           'e0': curr_traj.e0.value,
           'pulses_per_degree': mono1.pulses_per_deg,
-          'keithley_gainsB': [i0_gainB, it_gainB, ir_gainB, iff_gainB],
           }
     for indx in range(8):
         md[f'ch{indx+1}_offset'] = getattr(apb, f'ch{indx+1}_offset').get()
