@@ -35,7 +35,8 @@ detector_dictionary = {#colmirror_diag.name: {'obj': colmirror_diag, 'elements':
                     'xspress3 Hutch B' : {'device': xs, 'channels': ['xs_channel1_rois_roi01_value',
                                                                      'xs_channel1_rois_roi02_value',
                                                                      'xs_channel1_rois_roi03_value',
-                                                                     'xs_channel1_rois_roi04_value']}
+                                                                     'xs_channel1_rois_roi04_value']},
+                    'pilatus': {'device': pilatus, 'channels': ['pilatus_stats1_total']}
 
 }
 
@@ -55,6 +56,7 @@ motors_dictionary = {jj_slits_hutchB.xctr.name: {'name': jj_slits_hutchB.xctr.na
                      sample_stage1.z.name:      {'name': sample_stage1.z.name,      'description':'B hutch_sample_stage_z',        'object':sample_stage1.z,       'keyword': 'B hutch sample z'},
                      sample_stage1.theta.name:  {'name': sample_stage1.theta.name,  'description':'B hutch_sample_stage_theta',    'object':sample_stage1.theta,   'keyword': 'B hutch sample theta'},
                      sample_stage1.chi.name:    {'name': sample_stage1.chi.name,    'description':'B hutch_sample_stage_chi',      'object':sample_stage1.chi,     'keyword': 'B hutch sample chi'},
+                     mono1.energy.name :        {'name' :mono1.energy.name,         'description': 'Mono Energy',                  'object': mono1.energy,         'keyword': 'Monochromator Energy'}
                     }
 
 shutters_dictionary = {

@@ -35,7 +35,6 @@ class AnalogPizzaBoxTrigger(Device):
         self._resource_uid = None
         self._datum_counter = None
 
-
     # Step-scan interface
     def stage(self, *args, **kwargs):
         file_uid = new_uid()
@@ -81,6 +80,9 @@ class AnalogPizzaBoxTrigger(Device):
         self.acquire.put(0)
         self.stream.put(0)
         return super().unstage(*args, **kwargs)
+
+    def prepare_to_fly(self, traj_duration):
+        self.num_points = int(self.freq.get() * (traj_duration + 1))
 
     def complete(self, *args, **kwargs):
         def callback_saving(value, old_value, **kwargs):
@@ -146,7 +148,7 @@ class AnalogPizzaBoxTrigger(Device):
 
 #XF:07BMB-CT{PBA:1}:Pulse:1:Frequency-SP
 apb_trigger = AnalogPizzaBoxTrigger(prefix="XF:07BMB-CT{PBA:1}:Pulse:1:", name="apb_trigger")
-apb_trigger_pil100k = AnalogPizzaBoxTrigger(prefix="XF:07BMB-CT{PBA:1}:Pulse:2:", name="apb_trigger_pil100k")
+apb_trigger_pil900k = AnalogPizzaBoxTrigger(prefix="XF:07BMB-CT{PBA:1}:Pulse:2:", name="apb_trigger_pil900k")
 
 
 

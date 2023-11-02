@@ -165,6 +165,18 @@ from bluesky_darkframes import DarkSubtraction
 from event_model import RunRouter
 from suitcase.tiff_series import Serializer
 
+
+def pilatus_serializer_factory(name, doc):
+    serializer = Serializer(
+        '/nsls2/data/qas-new/legacy/processed/{year}/{cycle}/{PROPOSAL}XRD'.format(**doc),
+        file_prefix = (
+            '{start[sample_name]}-'
+            '{start[exposure_time]:.1f}s-'
+            '{start[scan_id]}-'
+        )
+    )
+
+
 def darksubtraction_serializer_factory(name, doc):
     # The problem this is solving is to store documents from this run long
     # enough to cross-reference them (e.g. light frames and dark frames),
@@ -354,6 +366,50 @@ def get_subtracted_image(scan_id=-1, img_field='pe1_image'):
     light_avg = np.mean(imgs_light, axis=0)
     sub = subtract_dark(light_avg, dark_avg)
     return sub
+
+
+
+
+
+    # from bluesky.plan_stubs import one_shot
+    #
+    # def shuttered_oneshot(dets):
+    #     yield from bps.mv(shutter, 'Open')
+    #     ret = yield from one_shot(dets)
+    #     yield from bps.mv(shutter, 'Close')
+    #     return ret
+    #
+    # @bpp.subs_decorator(darksubtraction_serializer_rr)
+    # def inner_count_qas():
+    #     if pilatus in detectors:
+    #         yield from bps.mv(pilatus.cam.acquire_time, exposure_time)
+    #         # set acquire_period to slightly longer than exposure_time
+    #         # to avoid spending a lot of time after the exposure just waiting around
+    #         yield from bps.mv(pilatus.cam.acquire_period, exposure_time + 0.1)
+    #         # yield from bps.mv(pilatus.images_per_set, subframe_count)
+    #
+    #     return (
+    #         yield from bp.count(
+    #             detectors,
+    #             num=number_of_images,
+    #             md={
+    #                 "experiment": 'diffraction',
+    #                 "sample_name": sample_name,
+    #                 "exposure_time": subframe_time * subframe_count
+    #             },
+    #             per_shot=shuttered_oneshot,
+    #             delay=delay
+    #         )
+    #     )
+    #
+    # def finally_plan():
+    #     yield from bps.mv(shutter, "Open")
+    #
+    # return (yield from bpp.finalize_wrapper(inner_count_qas(), finally_plan))
+    #
+    #
+    # pass
+
 
 
 # def plot_image(data, **kwargs):

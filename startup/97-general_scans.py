@@ -1,7 +1,7 @@
 def general_scan_plan(detectors, motor, rel_start, rel_stop, num):
     plan = bp.relative_scan(detectors, motor, rel_start, rel_stop, num)
 
-    if detectors[0].name == 'xs':
+    if detectors[0].name == 'xs' or detectors[0].name == "pilatus":
         plan = plan
     elif hasattr(detectors[0], 'kickoff'):
         plan = bpp.fly_during_wrapper(plan, detectors)

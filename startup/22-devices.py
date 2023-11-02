@@ -263,8 +263,8 @@ class WienerPowerSupply(Device):
     ir_grid_rb = Cpt(EpicsSignal, 'u305}V-Sense')
     ir_grid_sp = Cpt(EpicsSignal, 'u305}V-Set')
 
-wps = WienerPowerSupply("XF:07BMB-OP{WPS:01-HV:", name='wps')
-
+wps = WienerPowerSupply("XF:07BMC-OP{WPS:01-HV:", name='wps') # For hutch C
+# wps = WienerPowerSupply("XF:07BMB-OP{WPS:01-HV:", name='wps') For hutch B
 class ICAmplifier(Device):
 
     gain = Cpt(EpicsSignal,'Gain')
