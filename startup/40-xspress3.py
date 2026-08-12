@@ -31,6 +31,7 @@ import itertools
 import time as ttime
 from collections import deque, OrderedDict
 import warnings
+import h5py
 
 
 class Xspress3FileStoreFlyable(Xspress3FileStore):
@@ -428,6 +429,12 @@ class QASXspress3HDF5Handler(Xspress3HDF5Handler):
         return_dict_rois = {chanroi: self._roi_data[chanroi][frame] for chanroi in self.chanrois}
         return {**return_dict, **return_dict_rois}
 
+    def open(self):
+        if self._file:
+            return
+
+        self._file = h5py.File(self._filename, "r", swmr=True)
+
 
 # heavy-weight file handler
 db.reg.register_handler(QASXspress3HDF5Handler.HANDLER_NAME,
@@ -470,6 +477,12 @@ class QASXspress3HDF5Handler_light(Xspress3HDF5Handler):
         return_dict_rois = {chanroi: self._roi_data[chanroi][frame] for chanroi in self.chanrois}
         # return {**return_dict, **return_dict_rois}
         return return_dict_rois
+
+    def open(self):
+        if self._file:
+            return
+
+        self._file = h5py.File(self._filename, "r", swmr=True)
 
     # db.reg.register_handler(QASXspress3HDF5Handler_light.HANDLER_NAME,
     #                         QASXspress3HDF5Handler_light, overwrite=True)

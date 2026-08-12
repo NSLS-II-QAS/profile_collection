@@ -4,6 +4,7 @@ from itertools import product
 
 import pandas as pd
 from databroker.assets.handlers import HandlerBase, Xspress3HDF5Handler, XS3_XRF_DATA_KEY
+import h5py
 
 
 fc = 7.62939453125e-05
@@ -155,6 +156,12 @@ class QASXspress3HDF5Handler(Xspress3HDF5Handler):
                           columns=[f'ch_{n+1}' for n in range(num_channels)])
         #return pd.concat([df]+[attrsdf])
         return df
+
+    def open(self):
+        if self._file:
+            return
+
+        self._file = h5py.File(self._filename, "r", swmr=True)
 
 db.reg.register_handler('PIZZABOX_AN_FILE_TXT',
                         PizzaBoxAnHandlerTxt, overwrite=True)

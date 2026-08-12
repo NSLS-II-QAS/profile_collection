@@ -1,4 +1,5 @@
 import math
+import copy
 import numpy
 import os
 import warnings
@@ -28,6 +29,8 @@ LENGTH = 100_000
 
 
 def patch_descriptor(doc):
+    doc = copy.deepcopy(doc)
+
     if "pb1_enc1" in doc["data_keys"]:
         data_key = doc["data_keys"]["pb1_enc1"]
         data_key["dtype_str"] = pb1_dtype.str
@@ -78,6 +81,7 @@ def patch_descriptor(doc):
     return doc
 
 def patch_datum(doc):
+    doc = copy.deepcopy(doc)
     kwargs = doc.get("datum_kwargs", {})
 
     # Override indices with the point_number if present:
@@ -89,7 +93,7 @@ def patch_datum(doc):
     return doc
 
 def patch_resource(doc):
-
+    doc = copy.deepcopy(doc)
     kwargs = doc.get("resource_kwargs", {})
 
     # Fix the resource path

@@ -14,6 +14,41 @@ import PyQt5
 from ophyd.sim import motor
 motor.move = motor.set
 
+## MEMORY LEAK MONITORING
+# 03/10/2026 - Kbarry
+
+# import os
+# import tracemalloc
+# import linecache
+# import threading
+# import time
+# import sys
+# 
+# def display_top(snapshot, key_type='lineno', limit=10):
+#     snapshot = snapshot.filter_traces((
+#         tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+#         tracemalloc.Filter(False, "<unknown>"),
+#     ))
+#     top_stats = snapshot.statistics(key_type)
+# 
+#     print("Top %s lines" % limit)
+#     for index, stat in enumerate(top_stats[:limit], 1):
+#         frame = stat.traceback[0]
+#         print("#%s: %s:%s: %.1f KiB"
+#               % (index, frame.filename, frame.lineno, stat.size / 1024))
+#         line = linecache.getline(frame.filename, frame.lineno).strip()
+#         if line:
+#             print('    %s' % line)
+# 
+#     other = top_stats[limit:]
+#     if other:
+#         size = sum(stat.size for stat in other)
+#         print("%s other: %.1f KiB" % (len(other), size / 1024))
+#     total = sum(stat.size for stat in top_stats)
+#     print("Total allocated size: %.1f KiB" % (total / 1024))
+# 
+# tracemalloc.start()
+
 
 detector_dictionary = {#colmirror_diag.name: {'obj': colmirror_diag, 'elements': [colmirror_diag.stats1.total.name, colmirror_diag.stats2.total.name]},
                     #screen_diag.name: {'obj': screen_diag, 'elements': [screen_diag.stats1.total.name, screen_diag.stats2.total.name]},
@@ -143,7 +178,8 @@ if not app:
     app = QApplication(sys.argv)
 
 #newApp = PyQt5.QtWidgets.QApplication(sys.argv)
-
+print("Authenticating XliveGUI Tiled Client:")
+xlive_tiled_client = from_uri("https://tiled.nsls2.bnl.gov", username=None, remember_me=False)
 xlive_gui = isstools.xlive.XliveGui(plan_funcs=plan_funcs,
                                     diff_plans=[count_qas, dark_frame_preprocessor, count_pilatus_qas, count_pilatus_qas_dafs],
                                     aux_plan_funcs =aux_plan_funcs,
@@ -166,6 +202,7 @@ xlive_gui = isstools.xlive.XliveGui(plan_funcs=plan_funcs,
                                     wps = wps,
                                     mfc = mfc,
                                     window_title="XLive@QAS/7-BM NSLS-II",
+                                    tiled_client=xlive_tiled_client
                                    )
 
 sys.stdout = xlive_gui.emitstream_out
@@ -176,3 +213,16 @@ def xlive():
 
 
 xlive()
+
+# def _tracemalloc_reporter(interval=60):
+#     try:
+#         while True:
+#             time.sleep(interval)
+#             snapshot = tracemalloc.take_snapshot()
+#             print("\nTracemalloc periodic report:")
+#             display_top(snapshot)
+#     except Exception as _:
+#         pass
+# 
+# _tracemalloc_thread = threading.Thread(target=_tracemalloc_reporter, args=(60,), daemon=True)
+# _tracemalloc_thread.start()

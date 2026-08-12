@@ -17,6 +17,7 @@ from ophyd.device import Staged
 from ophyd.sim import NullStatus
 from enum import Enum
 from collections import deque, OrderedDict
+import h5py
 
 from ophyd.areadetector import Xspress3Detector
 from nslsii.areadetector.xspress3 import (
@@ -251,6 +252,12 @@ class QASXspress3XHDF5Handler(Xspress3HDF5Handler):
         # arr_data = np.asarray(self._file[self.XRF_DATA_KEY])
         # print(arr_data.shape)
         return self._array_data[frame_number, :, :]
+
+    def open(self):
+        if self._file:
+            return
+
+        self._file = h5py.File(self._filename, "r", swmr=True)
 
 
 # heavy-weight file handler
